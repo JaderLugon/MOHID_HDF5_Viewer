@@ -1146,10 +1146,19 @@ def main_event_loop():
         
         if window == sg.TIMEOUT_KEY:
             continue
-        
+
+        # Capturar tipo de modelo selecionado
+        if values['-M_WATER-']:
+            state.model_type = 'MOHID Water'
+            logger.info("Model type set to: MOHID Water")
+        elif values['-M_LAND-']:
+              state.model_type = 'MOHID Land'
+              logger.info("Model type set to: MOHID Land")                
+
+
         # ==================== MAIN WINDOW EVENTS ====================
         if window == main_win:
-            
+
             # Show welcome window
             if event == 'Show welcome window':
                 show_welcome_dialog()
@@ -1165,14 +1174,6 @@ def main_event_loop():
                     show_error_popup(f"{get_message('file_not_found')} '{path}'")
                     continue
                 
-                # Capturar tipo de modelo selecionado
-                if values['-M_WATER-']:
-                    state.model_type = 'MOHID Water'
-                    logger.info("Model type set to: MOHID Water")
-                elif values['-M_LAND-']:
-                      state.model_type = 'MOHID Land'
-                      logger.info("Model type set to: MOHID Land")                
-
                 vars_list = get_available_variables(path)
                 if not vars_list:
                     show_error_popup(get_message('no_variables'))

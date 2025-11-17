@@ -559,10 +559,8 @@ def extract_longitudinal_section(
     logger.info(f"Extracting longitudinal section at j={j_index} (latâ‰ˆ{lat_grid[j_index,0]:.4f})")
         
     # Extract section (all k layers, selected j, all i)
-#    section_data = data_3d[::-1, :, j_index]  # (nk, nx)
     section_data = data_3d[:, :, j_index]  # (nk, nx)
     section_lon = lon_grid[:, j_index]      # (nx,)
-#    section_depth = depth_grid[::-1, :, j_index]  # (nk, nx)
     section_depth = depth_grid[:, :, j_index]  # (nk, nx)
    
     # Validate dimensions
@@ -614,10 +612,8 @@ def extract_latitudinal_section(
     logger.info(f"Extracting latitudinal section at i={i_index} (lonâ‰ˆ{lon_grid[0, i_index]:.4f})")
     
     # Extract section (all k layers, all j, selected i)
-#    section_data = data_3d[::-1, i_index, :]  # (nk, ny)
     section_data = data_3d[:, i_index, :]  # (nk, ny)
     section_lat = lat_grid[i_index, :]      # (ny,)
-#    section_depth = depth_grid[::-1, i_index, :]  # (nk, ny)
     section_depth = depth_grid[:, i_index, :]  # (nk, ny)
     
     # Validate dimensions
@@ -750,7 +746,6 @@ def plot_vertical_section(
         vmin = float(np.nanmin(section_data_masked))
     if vmax is None:
         vmax = float(np.nanmax(section_data_masked))
-    print(p_size)
     if p_size is None:
         p_size = 10
 
@@ -767,28 +762,21 @@ def plot_vertical_section(
     # Create coordinate mesh - repeat coordinates for each layer
     coord_mesh = np.tile(section_coord, (nk, 1))
         
-    # Plot using pcolormesh
+    # Plot using scatter for layer centers (optional - can remove)
     try:
-#        im = ax.pcolormesh(
-#            coord_mesh, depth_mesh, section_data_masked,
-#            shading='auto',
-#            cmap=colormap,
-#            vmin=vmin,
-#            vmax=vmax,
-#            p_size=p_size
-#        )        
         im = ax.scatter(
-        coord_mesh, depth_mesh, 
-        c=section_data_masked,
-        cmap=colormap,
-        vmin=vmin,
-        vmax=vmax,
-        s=p_size,  # points size (adjust as necessary)
-        marker='s'
+            coord_mesh, depth_mesh, 
+            c=section_data_masked,
+            cmap=colormap,
+            vmin=vmin,
+            vmax=vmax,
+            s=p_size,
+            marker='s',
+            zorder=3
         )
         
     except Exception as e:
-        logger.error(f"Error in pcolormesh: {e}")
+        logger.error(f"Error in scatter plot: {e}")
         # Fallback to contourf with fewer levels
         try:
             levels = np.linspace(vmin, vmax, 15)
@@ -813,12 +801,29 @@ def plot_vertical_section(
                 origin='upper'
             )
     
+    # === PLOT LAYER INTERFACES AS LINES ===
+    # Plot horizontal lines for each layer interface (excluding surface, including bottom)
+    for k in range(0, nk):  # Start from 0 (bottom) to nk (insted of nk+1) skip surface
+        if k == 0:
+            # Bottom interface (use last layer depth + estimated thickness)
+            # Approximate by extrapolating from previous layers
+            interface_depth = depth_mesh[0, :] + (depth_mesh[0, :] - depth_mesh[1, :])
+        else:
+            # Interface between layers: average of two adjacent layer centers
+            interface_depth = (depth_mesh[k-1, :] + depth_mesh[k, :]) / 2.0
+        
+        # Plot the interface line
+        ax.plot(
+            section_coord, interface_depth,
+            'k-', linewidth=0.8, alpha=0.5, zorder=2
+        )
+    
     # Colorbar
     cbar = fig.colorbar(im, ax=ax, orientation='vertical', pad=0.02)
     cbar.set_label(var_name.title(), fontsize=11)
     
     # Labels
-    coord_label = 'Longitude (Â°E)' if coord_type == 'longitude' else 'Latitude (Â°N)'
+    coord_label = 'Longitude (°E)' if coord_type == 'longitude' else 'Latitude (°N)'
     ax.set_xlabel(coord_label, fontsize=11)
     
     depth_label = 'Depth (m)'
@@ -844,7 +849,6 @@ def plot_vertical_section(
     fig.tight_layout()
     
     return fig, ax
-
 
 def plot_section_with_bathymetry(
     section_data: npt.NDArray,
@@ -891,7 +895,7 @@ def plot_section_with_bathymetry(
     fig=fig, ax=ax,
     vertical_exaggeration=vertical_exaggeration
     )
-        
+    
     # Apply vertical exaggeration to bathymetry
     if model_type == 'MOHID Water':
       bathy_plot = -bathymetry * vertical_exaggeration
@@ -905,7 +909,7 @@ def plot_section_with_bathymetry(
     try:
         ax.plot(
             section_coord, bathy_plot,
-            'k-', linewidth=2.5, label='Bottom', zorder=10
+            'k-', linewidth=1.5, label='Bottom', zorder=10
         )
         ax.fill_between(
             section_coord, bathy_plot, ax.get_ylim()[0],
