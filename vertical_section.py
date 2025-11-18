@@ -12,6 +12,8 @@ import h5py
 
 from config import logger   #, UIConfig, DataConfig
 
+from gui_components import show_error_popup #DS_18/11
+
 
 def parse_geometry_file(geometry_path: str) -> Optional[Dict]:
     """
@@ -80,7 +82,8 @@ def parse_geometry_file(geometry_path: str) -> Optional[Dict]:
                         current_domain['domain_depth'] = depth_val if depth_val != -99 else None
         
         if not domains:
-            print("ERROR: No domains found in geometry file")
+            logger.error("ERROR: No domains found in geometry file")
+            show_error_popup("ERROR: No domains found in geometry file")
             return None
         
         # Separate domains
@@ -102,31 +105,31 @@ def parse_geometry_file(geometry_path: str) -> Optional[Dict]:
         
         total_layers = sum(d.get('layers', 0) for d in domains)
         
-        print("\n=== GEOMETRY PARSED (CORRECTED - LAYER ELIMINATION) ===")
-        print(f"Total layers (maximum): {total_layers}")
+        logger.info("\n=== GEOMETRY PARSED (CORRECTED - LAYER ELIMINATION) ===")
+        logger.info(f"Total layers (maximum): {total_layers}")
         
         if sigma_domain:
             sigma_end = cartesian_start_depth if cartesian_start_depth else 25
-            print(f"\nSIGMA Domain (ID={sigma_domain['id']}): {sigma_domain['layers']} layers")
-            print("  From: 0m (surface)")
-            print(f"  To: -{sigma_end}m (or bathymetry if shallower)")
-            print(f"  Proportions: {sigma_domain.get('layer_thickness', [])}")
+            logger.info(f"\nSIGMA Domain (ID={sigma_domain['id']}): {sigma_domain['layers']} layers")
+            logger.info("  From: 0m (surface)")
+            logger.info(f"  To: -{sigma_end}m (or bathymetry if shallower)")
+            logger.info(f"  Proportions: {sigma_domain.get('layer_thickness', [])}")
         
         if cartesiantop_domain:
             cart_thicknesses = cartesiantop_domain.get('layer_thickness', [])
             cart_total = sum(cart_thicknesses)
-            print(f"\nCARTESIANTOP Domain (ID={cartesiantop_domain['id']}): {cartesiantop_domain['layers']} layers (max)")
-            print(f"  Thicknesses: {cart_thicknesses}")
+            logger.info(f"\nCARTESIANTOP Domain (ID={cartesiantop_domain['id']}): {cartesiantop_domain['layers']} layers (max)")
+            logger.info(f"  Thicknesses: {cart_thicknesses}")
         
         if cartesian_domain:
             cart_start = cartesian_start_depth if cartesian_start_depth else 0
             cart_thicknesses = cartesian_domain.get('layer_thickness', [])
             cart_total = sum(cart_thicknesses)
-            print(f"\nCARTESIAN Domain (ID={cartesian_domain['id']}): {cartesian_domain['layers']} layers (max)")
-            print(f"  From: -{cart_start}m")
-            print(f"  To: -{cart_start + cart_total:.1f}m (if deep enough)")
-            print(f"  Thicknesses: {cart_thicknesses}")
-            print("  NOTE: Layers eliminated when exceeding bathymetry")
+            logger.info(f"\nCARTESIAN Domain (ID={cartesian_domain['id']}): {cartesian_domain['layers']} layers (max)")
+            logger.info(f"  From: -{cart_start}m")
+            logger.info(f"  To: -{cart_start + cart_total:.1f}m (if deep enough)")
+            logger.info(f"  Thicknesses: {cart_thicknesses}")
+            logger.info("  NOTE: Layers eliminated when exceeding bathymetry")
         
         return {
             'domains': domains,
@@ -138,7 +141,8 @@ def parse_geometry_file(geometry_path: str) -> Optional[Dict]:
         }
         
     except Exception as e:
-        print(f"ERROR parsing geometry file: {e}")
+        logger.error(f"ERROR parsing geometry file: {e}")
+        show_error_popup(f"ERROR parsing geometry file: {e}")
         return None
 
 
@@ -287,10 +291,10 @@ def build_3d_depth_grid_land(
     # Maximum soil depth (can be adjusted based on model configuration)
     max_soil_depth = 100.0  # meters below surface
     
-    print("\n=== BUILDING 3D DEPTH GRID: MOHID LAND ===")
-    print(f"Vertical Exaggeration: {vertical_exaggeration}x")
-    print("Surface level: altimetry (topography)")
-    print(f"Maximum soil depth: {max_soil_depth}m below surface")
+    logger.info("\n=== BUILDING 3D DEPTH GRID: MOHID LAND ===")
+    logger.info(f"Vertical Exaggeration: {vertical_exaggeration}x")
+    logger.info("Surface level: altimetry (topography)")
+    logger.info(f"Maximum soil depth: {max_soil_depth}m below surface")
     
     # For each horizontal cell
     for j in range(ny):
@@ -328,9 +332,9 @@ def build_3d_depth_grid_land(
     
     valid_cells = np.sum(~np.isnan(depth_grid))
     total_cells = depth_grid.size
-    print(f"\nBuilt 3D depth grid (MOHID Land): shape={depth_grid.shape}")
-    print(f"Valid cells: {valid_cells}/{total_cells} ({100*valid_cells/total_cells:.1f}%)")
-    print(f"Elevation range: {np.nanmin(depth_grid):.2f}m to {np.nanmax(depth_grid):.2f}m")
+    logger.info(f"\nBuilt 3D depth grid (MOHID Land): shape={depth_grid.shape}")
+    logger.info(f"Valid cells: {valid_cells}/{total_cells} ({100*valid_cells/total_cells:.1f}%)")
+    logger.info(f"Elevation range: {np.nanmin(depth_grid):.2f}m to {np.nanmax(depth_grid):.2f}m")
     
     return depth_grid
 
@@ -381,10 +385,10 @@ def build_3d_depth_grid_water(
     cartesian_layers = cartesian_domain.get('layers', 0) if cartesian_domain else 0
     cartesian_thicknesses = cartesian_domain.get('layer_thickness', []) if cartesian_domain else []
     
-    print("\n=== BUILDING 3D DEPTH GRID: MOHID WATER ===")
-    print("Surface level: 0m (sea level)")
-    print(f"SIGMA domain: 0m to -{abs(cartesian_start_depth)}m (or bathymetry)")
-    print(f"CARTESIAN domain: -{abs(cartesian_start_depth)}m to bottom")
+    logger.info("\n=== BUILDING 3D DEPTH GRID: MOHID WATER ===")
+    logger.info("Surface level: 0m (sea level)")
+    logger.info(f"SIGMA domain: 0m to -{abs(cartesian_start_depth)}m (or bathymetry)")
+    logger.info(f"CARTESIAN domain: -{abs(cartesian_start_depth)}m to bottom")
     
     # For each horizontal cell
     for j in range(ny):
@@ -481,9 +485,9 @@ def build_3d_depth_grid_water(
         
     valid_cells = np.sum(~np.isnan(depth_grid))
     total_cells = depth_grid.size
-    print(f"\nBuilt 3D depth grid (MOHID Water): shape={depth_grid.shape}")
-    print(f"Valid cells: {valid_cells}/{total_cells} ({100*valid_cells/total_cells:.1f}%)")
-    print(f"Depth range: {np.nanmin(depth_grid):.2f}m to {np.nanmax(depth_grid):.2f}m")
+    logger.info(f"\nBuilt 3D depth grid (MOHID Water): shape={depth_grid.shape}")
+    logger.info(f"Valid cells: {valid_cells}/{total_cells} ({100*valid_cells/total_cells:.1f}%)")
+    logger.info(f"Depth range: {np.nanmin(depth_grid):.2f}m to {np.nanmax(depth_grid):.2f}m")
     
     return depth_grid
     

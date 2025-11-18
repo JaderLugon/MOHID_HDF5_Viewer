@@ -13,7 +13,8 @@ import FreeSimpleGUI as sg
 
 from config import (
     UIConfig, BASEMAP_OPTIONS, COLOR_SCALE_OPTIONS,
-    APP_TITLE, APP_AUTHORS, APP_DESCRIPTION
+    APP_TITLE, APP_AUTHORS, APP_DESCRIPTION,
+    logger #DS_18/11
 )
 
 

@@ -3,13 +3,68 @@ MOHID HDF5 Viewer - Configuration and Constants
 """
 from typing import List, Tuple
 import logging
+import os
+from datetime import datetime
 
 # ===================== LOGGING CONFIGURATION =====================
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(levelname)s - %(message)s'
+# )
 logger = logging.getLogger(__name__)
+
+# ===================== LOGGING CONFIGURATION ===================== 
+def setup_logging(): #DS_18/11
+    """Initialize logging system with file + console handlers."""
+    
+    # Create log filename
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    log_filename = f"LOG_{timestamp}.txt"
+    
+    # Full path (program execution folder)
+    log_path = os.path.join(os.getcwd(), log_filename)
+
+    # Create main logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Formatter
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+    # File handler
+    file_handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    logger.info("Logging initialized")
+    logger.info(f"Log file created: {log_path}")
+
+    return logger, file_handler
+
+
+def finalize_log(file_handler): #DS_18/11
+    """
+    Finaliza corretamente o arquivo de log.
+    Deve ser chamada quando a aplicação estiver fechando.
+    """
+    logger = logging.getLogger()
+
+    try:
+        logger.info("Finalizing log system...")
+
+        # Remove file handler para liberar o arquivo
+        logger.removeHandler(file_handler)
+        file_handler.close()
+
+        logger.info("Log finalized successfully.")
+
+    except Exception as e:
+        print(f"Error finalizing log: {e}")
 
 
 # ===================== APPLICATION METADATA =====================

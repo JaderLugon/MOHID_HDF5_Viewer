@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from config import logger, FilePatterns, UIConfig
 
+from gui_components import show_error_popup #DS_18/11
 
 class JpgSeriesViewer:
     """
@@ -157,6 +158,7 @@ class JpgSeriesViewer:
             
         except Exception as e:
             logger.error(f"Error displaying frame {index}: {e}")
+            show_error_popup(f"Error displaying frame {index}: {e}") #DS_18/11
     
     def timestamps(self) -> List[str]:
         """Get list of all timestamps"""
@@ -265,5 +267,5 @@ def open_viewer_window(folder: str) -> Tuple[Optional[sg.Window], Optional[JpgSe
         
     except Exception as e:
         logger.error(f"Error opening viewer: {e}")
-        sg.popup_error(f"Error opening viewer: {e}")
+        show_error_popup(f"Error opening viewer: {e}")
         return None, None

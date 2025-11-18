@@ -19,7 +19,10 @@ import FreeSimpleGUI as sg
 from config import (
     logger, UIConfig, BASEMAP_OPTIONS, COLOR_SCALE_OPTIONS,
     EXPORT_FORMATS, get_message, APP_TITLE, APP_DESCRIPTION,
-    APP_AUTHORS, Dependencies, UserPreferences
+    APP_AUTHORS, Dependencies, UserPreferences, 
+    setup_logging, #DS_18/11
+    finalize_log, #DS_18/11
+    logger #DS_18/11
 )
 from hdf5_utils import (
     get_available_variables, load_variable_data,
@@ -46,6 +49,7 @@ from vertical_section import (
     compute_section_statistics, export_section_to_csv,
 )
 
+logger, log_file_handler = setup_logging()
 
 class AppState:
     """Application state manager"""
@@ -85,6 +89,8 @@ class AppState:
     
     def _default_settings(self) -> Dict[str, Any]:
         """Return default settings"""
+        logger.info("Returning default settings")
+
         return {
             'reduce_mode': 'top',
             'reduce_index': 0,
@@ -115,7 +121,9 @@ class AppState:
         }
     
     def reset_k_metadata(self):
-        """Reset k-layer metadata"""
+        """Reseting k-layer metadata"""
+        logger.info("Reset k-layer metadata")
+
         self.k_metadata = {
             "has_k": False,
             "k_count": 0,
@@ -147,90 +155,188 @@ class AppState:
         
     def update_settings(self, new_settings: dict):
         """Update current settings"""
+        
         self.settings.update(new_settings)
 
 
+# def parse_nodata_values(text: str) -> list:
+#     """
+#     Parse comma/semicolon separated NoData values.
+    
+#     Args:
+#         text: Input text with values
+        
+#     Returns:
+#         List of float values
+#     """
+#     values = []
+#     if not text:
+#         return values
+    
+#     for token in text.replace(';', ',').split(','):
+#         token = token.strip()
+#         if not token:
+#             continue
+#         try:
+#             values.append(float(token))
+#         except ValueError:
+#             logger.warning(f"Could not parse NoData value: {token}")
+    
+#     return values
 def parse_nodata_values(text: str) -> list:
     """
     Parse comma/semicolon separated NoData values.
-    
-    Args:
-        text: Input text with values
-        
-    Returns:
-        List of float values
     """
-    values = []
-    if not text:
-        return values
     
-    for token in text.replace(';', ',').split(','):
+    logger.info("parse_nodata_values: iniciando análise dos NoData values")
+    logger.info(f"Entrada recebida: '{text}'")
+
+    values = []
+    
+    if not text:
+        logger.info("parse_nodata_values: texto vazio — retornando lista vazia")
+        return values
+
+    # Unifica separadores
+    normalized = text.replace(';', ',')
+    tokens = normalized.split(',')
+
+    for token in tokens:
         token = token.strip()
         if not token:
             continue
         try:
-            values.append(float(token))
+            value = float(token)
+            values.append(value)
         except ValueError:
-            logger.warning(f"Could not parse NoData value: {token}")
+            logger.warning(f"parse_nodata_values: valor inválido encontrado — '{token}'")
     
+    logger.info(f"parse_nodata_values: concluído — valores finais: {values}")
     return values
 
 
-def refresh_k_metadata(window: sg.Window, state: AppState):
-    """
-    Refresh k-layer metadata for current variable.
+# def refresh_k_metadata(window: sg.Window, state: AppState):
+#     """
+#     Refresh k-layer metadata for current variable.
     
-    Args:
-        window: Configuration window
-        state: Application state
-    """
+#     Args:
+#         window: Configuration window
+#         state: Application state
+#     """
+#     if not state.hdf_path or not state.current_var:
+#         return
+    
+#     try:
+#         import h5py
+#         with h5py.File(state.hdf_path, "r") as f:
+#             lat_full = f["Grid/Latitude"][:]
+#             var_path = f"Results/{state.current_var}"
+            
+#             k_axis, k_count = probe_k_axis_and_count(
+#                 f, var_path, state.current_var, lat_full.shape
+#             )
+            
+#             if not k_axis and not k_count:
+#                 # 2D variable
+#                 state.reset_k_metadata()
+#                 window['-K_INFO-'].update("Detected: 2-D variable (no vertical k)")
+#                 window['-K_COMBO-'].update(values=[], value='')
+#                 window['-VK-'].update(disabled=True)
+#                 window['-K_COMBO-'].update(disabled=True)
+#                 window['-SURF-'].update(True)
+#                 return
+            
+#             # 3D variable
+#             depths = compute_k_depths_mean(f, lat_full.shape, k_count)
+#             state.k_metadata = {
+#                 "has_k": True,
+#                 "k_count": k_count,
+#                 "k_depths": depths
+#             }
+            
+#             # Build combo list
+#             if depths is not None:
+#                 items = [f"k={k} (~ {depths[k]:.2f} m)" for k in range(k_count)]
+#                 info = f"Detected: 3-D variable with k=0..{k_count-1} (mean depth per layer)"
+#             else:
+#                 items = [f"k={k}" for k in range(k_count)]
+#                 info = f"Detected: 3-D variable with k=0..{k_count-1}"
+            
+#             window['-K_INFO-'].update(info)
+#             window['-K_COMBO-'].update(values=items, value=items[0] if items else '')
+#             window['-VK-'].update(disabled=False)
+#             window['-K_COMBO-'].update(disabled=not window['-VK-'].get())
+            
+#     except Exception as e:
+#         logger.error(f"Error reading k metadata: {e}")
+#         show_error_popup(f"Error reading k layer metadata: {e}")
+def refresh_k_metadata(window: sg.Window, state: AppState):
+    logger.info("refresh_k_metadata: iniciado")
+    logger.info(f"Arquivo HDF: {state.hdf_path}")
+    logger.info(f"Variável atual: {state.current_var}")
+
     if not state.hdf_path or not state.current_var:
+        logger.info("refresh_k_metadata: sem HDF ou variável — encerrando")
         return
     
     try:
         import h5py
         with h5py.File(state.hdf_path, "r") as f:
+            logger.info("HDF5 aberto com sucesso")
+
             lat_full = f["Grid/Latitude"][:]
             var_path = f"Results/{state.current_var}"
-            
+            logger.info(f"Verificando k-layer de: {var_path}")
+
             k_axis, k_count = probe_k_axis_and_count(
                 f, var_path, state.current_var, lat_full.shape
             )
-            
+            logger.info(f"Resultado probe_k_axis_and_count: k_axis={k_axis}, k_count={k_count}")
+
+            # --- CASO 2D ---
             if not k_axis and not k_count:
-                # 2D variable
+                logger.info(f"{state.current_var}: variável 2D detectada")
+                
                 state.reset_k_metadata()
                 window['-K_INFO-'].update("Detected: 2-D variable (no vertical k)")
                 window['-K_COMBO-'].update(values=[], value='')
                 window['-VK-'].update(disabled=True)
                 window['-K_COMBO-'].update(disabled=True)
                 window['-SURF-'].update(True)
+
+                logger.info("refresh_k_metadata concluído (2D)")
                 return
             
-            # 3D variable
+            # --- CASO 3D ---
+            logger.info(f"{state.current_var}: variável 3D detectada com {k_count} camadas")
+            
             depths = compute_k_depths_mean(f, lat_full.shape, k_count)
+            logger.info(f"Profundidades médias calculadas: {depths}")
+
             state.k_metadata = {
                 "has_k": True,
                 "k_count": k_count,
                 "k_depths": depths
             }
-            
-            # Build combo list
+
             if depths is not None:
                 items = [f"k={k} (~ {depths[k]:.2f} m)" for k in range(k_count)]
                 info = f"Detected: 3-D variable with k=0..{k_count-1} (mean depth per layer)"
             else:
                 items = [f"k={k}" for k in range(k_count)]
                 info = f"Detected: 3-D variable with k=0..{k_count-1}"
-            
+
             window['-K_INFO-'].update(info)
             window['-K_COMBO-'].update(values=items, value=items[0] if items else '')
             window['-VK-'].update(disabled=False)
             window['-K_COMBO-'].update(disabled=not window['-VK-'].get())
-            
+
+            logger.info("refresh_k_metadata concluído (3D)")
+
     except Exception as e:
         logger.error(f"Error reading k metadata: {e}")
         show_error_popup(f"Error reading k layer metadata: {e}")
+
 
 
 def show_all_k_layers(state: AppState):
@@ -248,6 +354,8 @@ def show_all_k_layers(state: AppState):
             lines.append(f"k={k:3d}  ~{depths[k]:.3f} m")
         else:
             lines.append(f"k={k:3d}")
+    
+    logger.info(f"show_all_k_layers: exibindo {len(lines)} camadas k")
     
     sg.popup_scrolled(
         "\n".join(lines),
@@ -294,6 +402,7 @@ def handle_config_window(state: AppState) -> Optional[dict]:
             if state.hdf_path and state.current_var:
                 refresh_k_metadata(config_win, state)
             else:
+                logger.error("no_k_refresh")
                 show_error_popup(get_message('no_k_refresh'))
         
         # Show all k layers
@@ -370,6 +479,7 @@ def handle_image_export(state: AppState) -> Optional[str]:
         Output directory path or None
     """
     if not state.hdf_path or not state.current_var:
+        logger.error("Please load an HDF5 file and select a variable first!")
         show_error_popup("Please load an HDF5 file and select a variable first!")
         return None
     
@@ -410,6 +520,7 @@ def handle_image_export(state: AppState) -> Optional[str]:
                 )
                 
                 if data is None:
+                    logger.error(get_message('loading_error'))
                     show_error_popup(get_message('loading_error'))
                     continue
                 
@@ -460,6 +571,7 @@ def handle_animation_export(state: AppState) -> Optional[str]:
         Output file path or None
     """
     if not state.hdf_path or not state.current_var:
+        logger.error("Please load an HDF5 file and select a variable first!")
         show_error_popup("Please load an HDF5 file and select a variable first!")
         return None
     
@@ -506,6 +618,7 @@ def handle_animation_export(state: AppState) -> Optional[str]:
                 )
                 
                 if data is None:
+                    logger.error(get_message('loading_error'))
                     show_error_popup(get_message('loading_error'))
                     continue
                 
@@ -552,6 +665,7 @@ def handle_shapefile_export(state: AppState) -> Optional[str]:
         Output directory path or None
     """
     if not state.hdf_path or not state.current_var:
+        logger.error("Please load an HDF5 file and select a variable first!")
         show_error_popup("Please load an HDF5 file and select a variable first!")
         return None
     
@@ -575,6 +689,7 @@ def handle_shapefile_export(state: AppState) -> Optional[str]:
                 export_func = export_as_csvs
                 format_name = "CSV"
             else:
+                logger.error("This export format is not yet implemented!")
                 show_error_popup("This export format is not yet implemented!")
                 continue
             
@@ -599,6 +714,7 @@ def handle_shapefile_export(state: AppState) -> Optional[str]:
                 )
                 
                 if data is None:
+                    logger.error(get_message('loading_error'))
                     show_error_popup(get_message('loading_error'))
                     continue
                 
@@ -637,6 +753,7 @@ def handle_vertical_section(state: AppState) -> None:
         state: Application state
     """
     if not state.hdf_path or not state.current_var:
+        logger.error("Please load an HDF5 file and select a variable first!")
         show_error_popup("Please load an HDF5 file and select a variable first!")
         return
     
@@ -654,6 +771,11 @@ def handle_vertical_section(state: AppState) -> None:
                 state.geometry_path = default_geometry
                 logger.info(f"Using default geometry file: {default_geometry}")
             else:
+                logger.error(
+                    f"Geometry file not found!\n\n"
+                    f"Please specify the Geometry file path in the main window.\n"
+                    f"Expected default location: {default_geometry}"
+                )
                 show_error_popup(
                     f"Geometry file not found!\n\n"
                     f"Please specify the Geometry file path in the main window.\n"
@@ -665,6 +787,10 @@ def handle_vertical_section(state: AppState) -> None:
         state.geometry_info = parse_geometry_file(state.geometry_path)
         
         if state.geometry_info is None:
+            logger.error(
+                f"Failed to parse geometry file!\n"
+                f"File: {state.geometry_path}"
+            )
             show_error_popup(
                 f"Failed to parse geometry file!\n"
                 f"File: {state.geometry_path}"
@@ -692,7 +818,7 @@ def handle_vertical_section(state: AppState) -> None:
         
         # Build 3D depth grid
         if state.depth_grid_3d is None:
-           print('Building 3d depth grid')
+           logger.info('Building 3d depth grid')
            if state.model_type == 'MOHID Water':
                state.depth_grid_3d = build_3d_depth_grid_water(
                                      state.geometry_info, bathymetry, vertical_exaggeration=1.0)
@@ -815,6 +941,7 @@ def handle_vertical_section(state: AppState) -> None:
             data_3d = load_3d_variable_timestep(state.hdf_path, state.current_var, timestep)
             
             if data_3d is None:
+                logger.error("Failed to load 3D data!")
                 show_error_popup("Failed to load 3D data!")
                 return
             
@@ -965,7 +1092,7 @@ def handle_vertical_section(state: AppState) -> None:
             
         except Exception as e:
             logger.error(f"Error updating section: {e}", exc_info=True)
-#            show_error_popup(f"Error updating section: {e}")
+            show_error_popup(f"Error updating section: {e}")
     
     # Event loop
     while True:
@@ -1020,12 +1147,14 @@ def handle_vertical_section(state: AppState) -> None:
         if event == '-VS_APPLY_VE-':
             # Only works for MOHID Land
             if state.model_type != 'MOHID Land':
+                logger.error("Vertical Exaggeration only applies to MOHID Land models!")
                 show_error_popup("Vertical Exaggeration only applies to MOHID Land models!")
                 continue
     
             try:
                 new_ve = float(values['-VS_VE-'])
                 if new_ve <= 0:
+                    logger.error("Vertical Exaggeration must be positive!")
                     show_error_popup("Vertical Exaggeration must be positive!")
                     continue
         
@@ -1044,6 +1173,7 @@ def handle_vertical_section(state: AppState) -> None:
                     update_section()
             
             except ValueError:
+                logger.error("Invalid Vertical Exaggeration value!")
                 show_error_popup("Invalid Vertical Exaggeration value!")
             except Exception as e:
                 logger.error(f"Error applying VE: {e}", exc_info=True)
@@ -1077,6 +1207,7 @@ def handle_vertical_section(state: AppState) -> None:
                         )
                         show_success_popup(f"Section exported to:\n{output_path}")
                     except Exception as e:
+                        logger.error(f"Export failed: {e}")
                         show_error_popup(f"Export failed: {e}")
             else:
                 show_error_popup("Please update the section first!")
@@ -1099,8 +1230,10 @@ def handle_vertical_section(state: AppState) -> None:
                             state.vs_canvas_agg.figure.savefig(output_path, dpi=300, bbox_inches='tight')
                             show_success_popup(f"Image saved to:\n{output_path}")
                     except Exception as e:
+                        logger.error(f"Export failed: {e}")
                         show_error_popup(f"Export failed: {e}")
             else:
+                logger.error("Please update the section first!")
                 show_error_popup("Please update the section first!")
     
     # Cleanup
@@ -1130,6 +1263,7 @@ def main_event_loop():
     """Main application event loop"""
     
     # Initialize
+    
     state = AppState()
     main_win = make_main_window()
     
@@ -1171,16 +1305,19 @@ def main_event_loop():
             if event == "Load Variables":
                 path = values['-FILE-']
                 if not path or not os.path.exists(path):
+                    logger.error(f"{get_message('file_not_found')} '{path}'")
                     show_error_popup(f"{get_message('file_not_found')} '{path}'")
                     continue
                 
                 vars_list = get_available_variables(path)
                 if not vars_list:
+                    logger.error(get_message('no_variables'))
                     show_error_popup(get_message('no_variables'))
                     continue
     
                 vars_list = get_available_variables(path)
                 if not vars_list:
+                        logger.error(get_message('no_variables'))
                         show_error_popup(get_message('no_variables'))
                         continue
 
@@ -1232,6 +1369,7 @@ def main_event_loop():
                         main_win['-STATUS-'].update(f"Geometry file loaded: {os.path.basename(geometry_path)}")
                         logger.info(f"Geometry file set: {geometry_path}")
                     elif geometry_path:
+                        logger.error(f"Geometry file not found: {geometry_path}")
                         show_error_popup(f"Geometry file not found: {geometry_path}")
                         state.geometry_path = None
                         main_win['-STATUS-'].update("Geometry file not found")
@@ -1241,6 +1379,7 @@ def main_event_loop():
             
             # Open configuration window
             if event == '-OPEN_CONFIG-':
+                logger.info("User opened the Configuration window")
                 new_settings = handle_config_window(state)
                 if new_settings:
                     state.update_settings(new_settings)
@@ -1248,6 +1387,7 @@ def main_event_loop():
             
             # Open image export window
             if event == '-OPEN_IMAGE-':
+                logger.info("User opened the Images window")
                 output = handle_image_export(state)
                 if output:
                     main_win['-LAST_DIR-'].update(output)
@@ -1255,18 +1395,23 @@ def main_event_loop():
             
             # Open animation export window
             if event == '-OPEN_ANIM-':
+                logger.info("User opened the Animagion window")
                 output = handle_animation_export(state)
                 if output:
                     main_win['-STATUS-'].update(f"Animation saved: {output}")
             
             # Open shapefile export window
             if event == '-OPEN_SHAPE-':
+                logger.info("User opened the Shapefiles window")
+
                 output = handle_shapefile_export(state)
                 if output:
                     main_win['-STATUS-'].update(f"Shapefiles exported to: {output}")
             
             # Open vertical section window
             if event == '-OPEN_VSECTION-':
+                logger.info("User opened the Vertical Sections window")
+
                 handle_vertical_section(state)
                 main_win['-STATUS-'].update("Vertical section viewer closed")
             
@@ -1283,6 +1428,7 @@ def main_event_loop():
             # Open viewer from last export
             if event == '-OPEN_VIEWER-':
                 if not state.last_jpg_dir or not os.path.isdir(state.last_jpg_dir):
+                    logger.error(get_message('no_jpg_export'))
                     show_error_popup(get_message('no_jpg_export'))
                 else:
                     viewer_win, viewer = open_viewer_window(state.last_jpg_dir)
@@ -1342,6 +1488,7 @@ def main_event_loop():
                     if 0 <= idx < len(ts_list):
                         viewer_win['-V_TS-'].update(value=ts_list[idx])
                 except Exception as e:
+                    logger.error("Timestamp not found in folder.")
                     show_error_popup(f"Error updating frame: {e}")
             
             # Previous button
@@ -1370,6 +1517,7 @@ def main_event_loop():
                         viewer_win['-V_SLIDER-'].update(value=idx)
                         viewer_win['-V_IDX-'].update(f"{idx+1} / {viewer.count()}")
                     except ValueError:
+                        logger.error("Timestamp not found in folder.")
                         show_error_popup("Timestamp not found in folder.")
     
     # Cleanup
@@ -1397,6 +1545,7 @@ def main():
     logger.info("Starting MOHID HDF5 Viewer")
     main_event_loop()
     logger.info("Application closed")
+    finalize_log(log_file_handler) #DS_18/11
     
 
 
