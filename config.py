@@ -7,10 +7,10 @@ import os
 from datetime import datetime
 
 # ===================== LOGGING CONFIGURATION =====================
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format='%(asctime)s - %(levelname)s - %(message)s'
-# )
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # ===================== LOGGING CONFIGURATION ===================== 
@@ -74,7 +74,8 @@ APP_AUTHORS = [
     "Giulliano de Lima Lopes de Oliveira Simeão Bigão",
     "Nikolas Gomes Silveira de Souza",
     "Rogerio Atem de Carvalho",
-    "Jader Lugon Jr."
+    "Jader Lugon Junior",
+    "Antonio Jose Silva Neto"
 ]
 APP_DESCRIPTION = """
 A comprehensive, interactive utility to inspect and export data from MOHID HDF5 files
