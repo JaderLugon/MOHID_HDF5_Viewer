@@ -527,7 +527,7 @@ If you use this tool in your research, please cite:
 
 ```
 MOHID HDF5 Viewer v2.0
-Authors: Bigão, G.L.L.O.S., Souza, N.G.S., Carvalho, R.A., Lugon Jr., J.
+Authors: Bigão, G.L.L.O.S., Souza, N.G.S., Carvalho, R.A., Lugon Jr., J., Silva Neto, J.
 Year: 2025
 ```
 
