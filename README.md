@@ -56,8 +56,9 @@ A comprehensive, interactive utility to inspect and export data from MOHID HDF5 
 
 - **Giulliano de Lima Lopes de Oliveira Simeão Bigão**
 - **Nikolas Gomes Silveira de Souza**
-- **Rogerio Atem de Carvalho**
-- **Jader Lugon Jr.**
+- **Rogério Atem de Carvalho**
+- **Jader Lugon Junior**
+- **Antônio José Silva Neto**
 
 Created: October 11, 2025
 
