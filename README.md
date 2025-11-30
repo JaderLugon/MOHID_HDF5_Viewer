@@ -58,6 +58,7 @@ A comprehensive, interactive utility to inspect and export data from MOHID HDF5 
 - **Nikolas Gomes Silveira de Souza**
 - **Rogerio Atem de Carvalho**
 - **Jader Lugon Jr.**
+- **Antônio José da Silva Neto**
 
 Created: October 11, 2025
 
@@ -526,7 +527,7 @@ If you use this tool in your research, please cite:
 
 ```
 MOHID HDF5 Viewer v2.0
-Authors: Bigão, G.L.L.O.S., Souza, N.G.S., Carvalho, R.A., Lugon Jr., J.
+Authors: Bigão, G.L.L.O.S., Souza, N.G.S., Carvalho, R.A., Lugon Jr., J., Silva Neto, A. J.
 Year: 2025
 ```
 
