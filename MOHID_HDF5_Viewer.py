@@ -1151,15 +1151,6 @@ def main_event_loop():
         if window == sg.TIMEOUT_KEY:
             continue
 
-        # Capturar tipo de modelo selecionado
-        if values['-M_WATER-']:
-            state.model_type = 'MOHID Water'
-            logger.info("Model type set to: MOHID Water")
-        elif values['-M_LAND-']:
-              state.model_type = 'MOHID Land'
-              logger.info("Model type set to: MOHID Land")                
-
-
         # ==================== MAIN WINDOW EVENTS ====================
         if window == main_win:
 
@@ -1170,6 +1161,14 @@ def main_event_loop():
             
             if event in (sg.WINDOW_CLOSED, 'Quit'):
                 break
+
+            # Capturar tipo de modelo selecionado
+            if values['-M_WATER-']:
+                state.model_type = 'MOHID Water'
+                logger.info("Model type set to: MOHID Water")
+            elif values['-M_LAND-']:
+                  state.model_type = 'MOHID Land'
+                  logger.info("Model type set to: MOHID Land")                
             
             # Load variables from file
             if event == "Load Variables":
@@ -1404,4 +1403,5 @@ def main():
     finalize_log(log_file_handler) #DS_18/1
 
 if __name__ == "__main__":
+
     main()
