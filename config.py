@@ -211,7 +211,7 @@ class DataConfig:
 class FilePatterns:
     """Regular expressions for file parsing"""
     TIMESTAMP_PATTERN = r'_(\d{8}_\d{4})\.jpg$'
-    SAFE_FILENAME_PATTERN = r'[^A-Za-z0-9_.-]+'
+    SAFE_FILENAME_PATTERN = r'[^A-Za-z0-9_.-/]+'
 
 
 # ===================== MESSAGES (i18n ready) =====================
