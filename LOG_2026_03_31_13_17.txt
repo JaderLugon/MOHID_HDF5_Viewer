@@ -1,2 +1,0 @@
-2026-03-31 13:17:56,121 - INFO - Logging initialized
-2026-03-31 13:17:56,122 - INFO - Log file created: /home/daniel/Documentos/MOHID_HDF5_ViewerPyPI/LOG_2026_03_31_13_17.txt
