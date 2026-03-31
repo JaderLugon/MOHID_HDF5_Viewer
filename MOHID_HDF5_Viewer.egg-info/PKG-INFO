@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: MOHID_HDF5_Viewer
+Version: 0.4
+Requires: hp5
+Requires: numpy
+Requires: matplotlib
+Requires: cartopy
+Requires: pillow
+Requires: ffmpeg
+Requires: rasterio
+Requires: FreeSimpleGUI
+License-File: LICENSE
+Dynamic: license-file
+Dynamic: requires
