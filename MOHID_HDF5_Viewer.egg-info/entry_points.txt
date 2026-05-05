@@ -1,0 +1,2 @@
+[console_scripts]
+MOHID_HDF5 = MOHID_HDF5_Viewer:main

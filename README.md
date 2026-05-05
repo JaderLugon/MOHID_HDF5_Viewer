@@ -59,7 +59,7 @@ A comprehensive, interactive utility to inspect and export data from MOHID HDF5 
 - **Rogerio Atem de Carvalho**
 - **Jader Lugon Jr.**
 - **Antônio José da Silva Neto**
-
+- **Danie Avila Alexander**
 Created: October 11, 2025
 
 ---
